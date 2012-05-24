@@ -12,6 +12,8 @@
 #endif
 #ifdef DZEN_XFT
 #include <X11/Xft/Xft.h>
+#include <pango/pango.h>
+#include <pango/pangoxft.h>
 #endif
 
 #define FONT		"-*-fixed-*-*-*-*-*-*-*-*-*-*-*-*"
@@ -54,9 +56,8 @@ struct Fnt {
 	int descent;
 	int height;
 #ifdef DZEN_XFT
-	XftFont *xftfont;
-	XGlyphInfo *extents;
 	int width;
+    PangoRectangle extents;
 #endif
 };
 

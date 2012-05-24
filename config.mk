@@ -39,8 +39,8 @@ INCS = -I. -I/usr/include -I${X11INC}
 
 
 ## Option 5: With XFT
-LIBS = -L/usr/lib -lc -L${X11LIB} -lX11 `pkg-config --libs xft`
-CFLAGS = -Wall -Os ${INCS} -DVERSION=\"${VERSION}\" -DDZEN_XFT `pkg-config --cflags xft`
+LIBS = -L/usr/lib -lc -L${X11LIB} -lX11 `pkg-config --libs xft` `pkg-config --libs gtk+-2.0` `pkg-config --libs glib-2.0` `pkg-config --libs pangoxft`
+CFLAGS = -Wall -Os ${INCS} -DVERSION=\"${VERSION}\" -DDZEN_XFT `pkg-config --cflags xft` -I/usr/include/pango-1.0/ `pkg-config --cflags gtk+-2.0` `pkg-config --cflags glib-2.0`
 
 
 ## Option 6: With XPM and XFT

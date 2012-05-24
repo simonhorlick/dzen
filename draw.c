@@ -15,6 +15,9 @@
 #include <X11/xpm.h>
 #endif
 
+#include <gtk/gtk.h>
+#include <gdk/gdkx.h>
+
 #define ARGLEN 256
 #define MAX_ICON_CACHE 32
 
@@ -31,6 +34,10 @@ icon_c icons[MAX_ICON_CACHE];
 int icon_cnt;
 int otx;
 int xorig=0;
+
+PangoFontDescription *desc;
+PangoContext *context;
+PangoLayout *layout;
 
 /* command types for the in-text parser */
 enum ctype  {bg, fg, icon, rect, recto, circle, circleo, pos, abspos, titlewin, ibg, fn, fixpos, ca, ba};
@@ -77,10 +84,12 @@ textnw(Fnt *font, const char *text, unsigned int len) {
 	}
 	return XTextWidth(font->xfont, text, len);
 #else
-	XftTextExtentsUtf8(dzen.dpy, dzen.font.xftfont, (unsigned const char *) text, strlen(text), dzen.font.extents);
-	if(dzen.font.extents->height > dzen.font.height)
-		dzen.font.height = dzen.font.extents->height;
-	return dzen.font.extents->xOff;
+    pango_layout_set_text (layout, text, len);
+    pango_layout_get_pixel_extents (layout, 0, &dzen.font.extents);
+
+	if(dzen.font.extents.height > dzen.font.height)
+		dzen.font.height = dzen.font.extents.height;
+	return dzen.font.extents.width;
 #endif
 }
 
@@ -152,15 +161,20 @@ setfont(const char *fontstr) {
 	}
 	dzen.font.height = dzen.font.ascent + dzen.font.descent;
 #else
-	dzen.font.xftfont = XftFontOpenXlfd(dzen.dpy, dzen.screen, fontstr);
-	if(!dzen.font.xftfont)
-	   dzen.font.xftfont = XftFontOpenName(dzen.dpy, dzen.screen, fontstr);
-	if(!dzen.font.xftfont)
-	   eprint("error, cannot load font: '%s'\n", fontstr);
-	dzen.font.extents = malloc(sizeof(XGlyphInfo));
-	XftTextExtentsUtf8(dzen.dpy, dzen.font.xftfont, (unsigned const char *) fontstr, strlen(fontstr), dzen.font.extents);
-	dzen.font.height = dzen.font.xftfont->ascent + dzen.font.xftfont->descent;
-	dzen.font.width = (dzen.font.extents->width)/strlen(fontstr);
+    context = pango_xft_get_context (dzen.dpy, dzen.screen);
+    layout = pango_layout_new (context);
+    desc = pango_font_description_from_string (fontstr);
+    pango_layout_set_font_description (layout, desc);
+    pango_font_description_free (desc);
+
+    pango_layout_set_text (layout, fontstr, -1);
+
+    pango_layout_get_pixel_extents(layout, 0, &dzen.font.extents);
+
+	dzen.font.ascent = PANGO_ASCENT(dzen.font.extents);
+	dzen.font.descent = PANGO_DESCENT(dzen.font.extents);
+	dzen.font.height = dzen.font.ascent + dzen.font.descent;
+	dzen.font.width = dzen.font.extents.width / strlen(fontstr);
 #endif
 }
 
@@ -806,9 +820,10 @@ parse_line(const char *line, int lnr, int align, int reverse, int nodraw) {
 				XftColorAllocName(dzen.dpy, DefaultVisual(dzen.dpy, dzen.screen),
 						DefaultColormap(dzen.dpy, dzen.screen),  xftcs,  &xftc);
 				}
-
-				XftDrawStringUtf8(xftd, &xftc, 
-						cur_fnt->xftfont, px, py + dzen.font.xftfont->ascent, (const FcChar8 *)lbuf, strlen(lbuf));
+            
+                int width, height;
+                pango_layout_get_pixel_size (layout, &width, &height);
+                pango_xft_render_layout (xftd, &xftc, layout, PANGO_SCALE*px, PANGO_SCALE*py + height);
 
 				if(xftcs_f) {
 					free(xftcs);
